@@ -1,0 +1,82 @@
+schemaVersion: 2.1.0
+metadata:
+  name: labs-openshift-pet-clinic-app
+attributes:
+  che-theia.eclipse.org/sidecar-policy: mergeImage
+  metadata-name-field: generateName
+  metadata-name-original-value: labs-openshift-pet-clinic-app
+projects:
+  - git:
+      remotes:
+        origin: 'https://github.com/HCL-Cloud-Native-Labs/labs-openshift-pet-clinic-app.git'
+    name: labs-openshift-pet-clinic-app
+components:
+  - attributes:
+      app.kubernetes.io/name: tools
+      che-theia.eclipse.org/vscode-extensions:
+        - 'relative:extension/resources/github_com/redhat-developer/devspaces-vscode-extensions/releases/download/7_44-che-assets/java-0.63.0-2222.vsix'
+        - 'relative:extension/resources/github_com/fabric8-analytics/fabric8-analytics-vscode-extension/releases/download/0_2_1/fabric8-analytics-0.2.1.vsix'
+        - 'relative:extension/resources/github_com/redhat-developer/devspaces-vscode-extensions/releases/download/7_44-che-assets/vscode-java-debug-0.26.0.vsix'
+        - 'relative:extension/resources/open-vsx_org/api/vscjava/vscode-java-test/0_28_1/file/vscjava.vscode-java-test-0.28.1.vsix'
+        - 'relative:extension/resources/github_com/redhat-developer/devspaces-vscode-extensions/releases/download/7_44-che-assets/java-0.82.0-369.vsix'
+      che-theia.eclipse.org/vscode-preferences:
+        java.server.launchMode: Standard
+    container:
+      args:
+        - sh
+        - '-c'
+        - '${PLUGIN_REMOTE_ENDPOINT_EXECUTABLE}'
+      endpoints:
+        - exposure: public
+          name: http-booster
+          protocol: http
+          targetPort: 8080
+      env:
+        - name: USE_JAVA8
+          value: 'true'
+        - name: PLUGIN_REMOTE_ENDPOINT_EXECUTABLE
+          value: /remote-endpoint/plugin-remote-endpoint
+        - name: THEIA_PLUGINS
+          value: 'local-dir:///plugins/sidecars/tools'
+        - name: CHE_DASHBOARD_URL
+          value: 'https://devspaces.apps.ocp-noi-build-cluster-labs.hclcnlabs.com'
+        - name: CHE_PLUGIN_REGISTRY_URL
+          value: 'https://devspaces.apps.ocp-noi-build-cluster-labs.hclcnlabs.com/plugin-registry/v3'
+        - name: CHE_PLUGIN_REGISTRY_INTERNAL_URL
+          value: 'http://plugin-registry.openshift-operators.svc:8080/v3'
+      image: 'registry.redhat.io/devspaces/udi-rhel8@sha256:d55549aad15742f6f7310da0c7abc1e65dd5d3ad2e3efb8fbf414cf91b9efac7'
+      memoryLimit: 3Gi
+      sourceMapping: /projects
+      volumeMounts:
+        - name: m2
+          path: /home/user/.m2
+        - name: remote-endpoint
+          path: /remote-endpoint
+        - name: plugins
+          path: /plugins
+    name: tools
+  - name: m2
+    volume:
+      size: 1G
+commands:
+  - exec:
+      commandLine: mvn -DskipTests clean install
+      component: tools
+      group:
+        kind: build
+      workingDir: '${PROJECTS_ROOT}/labs-openshift-pet-clinic-app'
+    id: 1-build
+  - exec:
+      commandLine: 'mvn spring-boot:run'
+      component: tools
+      group:
+        kind: run
+      workingDir: '${PROJECTS_ROOT}/labs-openshift-pet-clinic-app'
+    id: 2-run
+  - exec:
+      commandLine: mvn verify
+      component: tools
+      group:
+        kind: test
+      workingDir: '${PROJECTS_ROOT}/labs-openshift-pet-clinic-app'
+    id: 3-run-tests
